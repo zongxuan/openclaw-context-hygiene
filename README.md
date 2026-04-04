@@ -1,84 +1,77 @@
-# OpenClaw Context Hygiene
+# Context Hygiene Hook for OpenClaw
 
-> Three-layer context compression for OpenClaw — snipCompact, autoCompact, contextCollapse
+Three-layer context compression hook for OpenClaw agents.
 
-## What It Does
+## Events
 
-`context-hygiene` is an OpenClaw hook that automatically cleans up your AI conversation context, keeping long sessions fast and stable.
+| Event | When | Layer | Purpose |
+|-------|------|-------|---------|
+| `before_prompt_build` | After model resolved, messages ready | L0 snipCompact | ~5ms cleanup before every LLM call |
+| `before_compaction` | Before compaction | L2 contextCollapse | Aggressive compression before summarizing |
 
-```
-用户发消息
-    ↓
-before_prompt_build (Layer 0 snipCompact ~5ms)
-  → 移除 zombie 消息
-  → 去重重复的 tool_result
-  → 清理空消息
-    ↓
-AI 处理消息
-    ↓
-session:compact:before (Layer 2 contextCollapse)
-  → 激进压缩（需要时）
-    ↓
-返回 AI 回复
-```
+## What it cleans
 
-## Three Layers
+**Layer 0 snipCompact** (`before_prompt_build`):
+- `[zombie message]` markers
+- Empty throttle/warning messages
+- Consecutive duplicate tool results
+- Consecutive same-file reads (keeps last only)
 
-| Layer | Name | Speed | Description |
-|-------|------|--------|-------------|
-| Layer 0 | snipCompact | ~5ms | Fast cleanup: zombie removal, dedup, empty msg removal |
-| Layer 1 | autoCompact | ~10-30s | AI model summarizes oldest conversations |
-| Layer 2 | contextCollapse | ~5ms | Aggressive: truncate intermediates, dedup cross-session reads |
+**Layer 2 contextCollapse** (`before_compaction`):
+- Intermediate tool results (same path, keeps final only)
+- Cross-conversation file read deduplication
+- Large outputs (>2KB → truncated to first line)
 
 ## Installation
 
 ```bash
-# Download and extract
-tar -xzf openclaw-context-hygiene.tar.gz
-cd openclaw-context-hygiene
+# Install via OpenClaw CLI
+openclaw plugins install /path/to/openclaw-context-hygiene.tar.gz
 
-# Install
-./install.sh
+# Or from GitHub raw URL
+openclaw plugins install https://github.com/steve/openclaw-context-hygiene/releases/latest/download/openclaw-context-hygiene.tar.gz
+```
+
+## Manual Installation
+
+```bash
+# Extract to OpenClaw hooks directory
+mkdir -p ~/.openclaw/hooks
+tar -xzf openclaw-context-hygiene.tar.gz -C ~/.openclaw/hooks/
+
+# Enable in config (~/.openclaw/openclaw.json)
+# Add to hooks.internal.entries if workspace hook (disabled by default):
+{
+  "hooks": {
+    "internal": {
+      "entries": {
+        "openclaw-context-hygiene": {
+          "enabled": true
+        }
+      }
+    }
+  }
+}
 
 # Restart gateway
 openclaw gateway restart
-
-# Verify
-openclaw hooks list | grep context-hygiene
 ```
 
-## Requirements
+## Verify Installation
 
-- OpenClaw 2026.3.24 or later
-- Node.js 22+
+```bash
+openclaw hooks list
+```
 
-## Configuration
-
-No configuration required — works out of the box.
+You should see `context-hygiene` in the list with status `ready`.
 
 ## Uninstall
 
 ```bash
-rm -rf ~/.openclaw/hooks/context-hygiene
+rm -rf ~/.openclaw/hooks/openclaw-context-hygiene
 openclaw gateway restart
 ```
 
-## Files
-
-```
-├── HOOK.md           # OpenClaw hook metadata
-├── index.js          # Self-contained hook (no external dependencies)
-├── install.sh         # Install script
-├── README.md         # This file
-├── LICENSE            # MIT License
-└── package.json      # Package manifest
-```
-
-## License
-
-MIT
-
-## Credits
+## Source
 
 Based on Claude Code v2.1.88 architecture study.
-See: [Claude Code Architecture Study](https://github.com/steve/ClaudeCodeArchitectureStudy)

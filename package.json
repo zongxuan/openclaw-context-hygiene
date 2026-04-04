@@ -1,14 +1,8 @@
 {
   "name": "openclaw-context-hygiene",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Three-layer context compression hook for OpenClaw",
-  "keywords": [
-    "openclaw",
-    "context",
-    "compression",
-    "snipcompact",
-    "context-collapse"
-  ],
+  "keywords": ["openclaw", "context", "compression", "hook"],
   "license": "MIT",
   "homepage": "https://github.com/steve/openclaw-context-hygiene",
   "repository": {
@@ -16,10 +10,7 @@
     "url": "https://github.com/steve/openclaw-context-hygiene"
   },
   "openclaw": {
-    "hooks": [
-      "before_prompt_build",
-      "session:compact:before"
-    ]
+    "hooks": ["."]
   },
   "engines": {
     "node": ">=22"
