@@ -1,77 +1,97 @@
-# Context Hygiene Hook for OpenClaw
+# OpenClaw Context Hygiene
 
-Three-layer context compression hook for OpenClaw agents.
+> Three-layer context compression for OpenClaw — snipCompact, contextCollapse
 
-## Events
+## What It Does
 
-| Event | When | Layer | Purpose |
-|-------|------|-------|---------|
-| `before_prompt_build` | After model resolved, messages ready | L0 snipCompact | ~5ms cleanup before every LLM call |
-| `before_compaction` | Before compaction | L2 contextCollapse | Aggressive compression before summarizing |
+`context-hygiene` is an OpenClaw hook that automatically cleans up your AI conversation context, keeping long sessions fast and stable.
 
-## What it cleans
+```
+用户发消息
+    ↓
+before_prompt_build (Layer 0 snipCompact ~5ms)
+  → 移除 zombie 消息
+  → 去重重复的 tool_result
+  → 清理空消息
+    ↓
+AI 处理消息
+    ↓
+before_compaction (Layer 2 contextCollapse)
+  → 激进压缩（需要时）
+    ↓
+返回 AI 回复
+```
 
-**Layer 0 snipCompact** (`before_prompt_build`):
-- `[zombie message]` markers
-- Empty throttle/warning messages
-- Consecutive duplicate tool results
-- Consecutive same-file reads (keeps last only)
+## Three Layers
 
-**Layer 2 contextCollapse** (`before_compaction`):
-- Intermediate tool results (same path, keeps final only)
-- Cross-conversation file read deduplication
-- Large outputs (>2KB → truncated to first line)
+| Layer | Hook | Speed | Description |
+|-------|------|--------|-------------|
+| Layer 0 | `before_prompt_build` | ~5ms | Fast cleanup: zombie removal, dedup, empty msg removal |
+| Layer 1 | (auto by OpenClaw) | ~10-30s | AI model summarizes oldest conversations |
+| Layer 2 | `before_compaction` | ~5ms | Aggressive: truncate intermediates, dedup cross-session reads |
 
 ## Installation
 
 ```bash
-# Install via OpenClaw CLI
-openclaw plugins install /path/to/openclaw-context-hygiene.tar.gz
-
-# Or from GitHub raw URL
-openclaw plugins install https://github.com/steve/openclaw-context-hygiene/releases/latest/download/openclaw-context-hygiene.tar.gz
-```
-
-## Manual Installation
-
-```bash
 # Extract to OpenClaw hooks directory
-mkdir -p ~/.openclaw/hooks
-tar -xzf openclaw-context-hygiene.tar.gz -C ~/.openclaw/hooks/
-
-# Enable in config (~/.openclaw/openclaw.json)
-# Add to hooks.internal.entries if workspace hook (disabled by default):
-{
-  "hooks": {
-    "internal": {
-      "entries": {
-        "openclaw-context-hygiene": {
-          "enabled": true
-        }
-      }
-    }
-  }
-}
+cp -r openclaw-context-hygiene ~/.openclaw/hooks/context-hygiene
 
 # Restart gateway
 openclaw gateway restart
+
+# Verify
+openclaw hooks list | grep context-hygiene
 ```
 
-## Verify Installation
+## Requirements
+
+- OpenClaw 2026.3.24 or later
+- Node.js 22+
+
+## Configuration
+
+No configuration required — works out of the box.
+
+## File Structure
+
+```
+openclaw-context-hygiene/
+├── README.md           # This file
+├── LICENSE             # MIT License
+├── package.json       # Package manifest
+├── HOOK.md            # OpenClaw hook metadata
+├── dist/
+│   └── index.js       # The hook (self-contained, no external deps)
+├── tests/             # 143 test cases
+│   ├── test_adversarial.js
+│   ├── test_semantic.js
+│   ├── test_regression.js
+│   └── test_easter_egg.js
+└── reports/           # Development reports
+    ├── bugfix-summary.md
+    └── arch-integration-report.md
+```
+
+## Testing
 
 ```bash
-openclaw hooks list
+npm test
+# or individually:
+node tests/test_adversarial.js
+node tests/test_semantic.js
+node tests/test_regression.js
+node tests/test_easter_egg.js
 ```
 
-You should see `context-hygiene` in the list with status `ready`.
+## Key Fixes (vs upstream)
 
-## Uninstall
+- SHA1 content-aware deduplication (not truncation-based)
+- stableStringify input keys (handles all input field names)
+- Multi-block message support
+- Intermediate result collapse
+- Consecutive file read deduplication
+- Proper null/undefined/content handling
 
-```bash
-rm -rf ~/.openclaw/hooks/openclaw-context-hygiene
-openclaw gateway restart
-```
+## License
 
-## Source
-
-Based on Claude Code v2.1.88 architecture study.
+MIT

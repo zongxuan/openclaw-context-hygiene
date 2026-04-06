@@ -1,0 +1,9 @@
+# Backups
+*.bak.*
+
+# OS
+.DS_Store
+
+# Editor
+*.swp
+*.swo
