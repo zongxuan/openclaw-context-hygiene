@@ -1,21 +1,42 @@
 {
   "name": "openclaw-context-hygiene",
-  "version": "2.0.0",
-  "description": "Three-layer context compression hook for OpenClaw — snipCompact, autoCompact, contextCollapse",
-  "keywords": ["openclaw", "context", "compression", "hook"],
+  "version": "3.0.0",
+  "description": "Three-layer context compression hook for OpenClaw — snipCompact, autoCompact, contextCollapse. Keeps AI conversation contexts fast and stable during long sessions.",
+  "keywords": [
+    "openclaw",
+    "openclaw-hook",
+    "context",
+    "compression",
+    "conversation",
+    "ai",
+    "llm"
+  ],
   "license": "MIT",
-  "homepage": "https://github.com/steve/openclaw-context-hygiene",
+  "homepage": "https://github.com/zongxuan/openclaw-context-hygiene",
   "repository": {
     "type": "git",
-    "url": "https://github.com/steve/openclaw-context-hygiene"
+    "url": "https://github.com/zongxuan/openclaw-context-hygiene"
   },
+  "bugs": {
+    "url": "https://github.com/zongxuan/openclaw-context-hygiene/issues"
+  },
+  "author": {
+    "name": "zongxuan"
+  },
+  "main": "index.js",
   "openclaw": {
-    "hooks": ["dist"]
+    "hooks": ["index.js"]
   },
   "scripts": {
-    "test": "node tests/test_adversarial.js && node tests/test_semantic.js && node tests/test_regression.js && node tests/test_easter_egg.js"
+    "test": "node test_adversarial.js && node test_semantic.js && node test_regression.js && node test_easter_egg.js && node tests/test_system_protection.js"
   },
   "engines": {
     "node": ">=22"
-  }
+  },
+  "files": [
+    "index.js",
+    "HOOK.md",
+    "README.md",
+    "LICENSE"
+  ]
 }

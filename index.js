@@ -30,6 +30,8 @@ function snipCompact(messages) {
   // Pass 1: Remove zombies + empty messages
   const pass1 = []
   for (const msg of messages) {
+    // Protect system messages (SOUL.md, AGENTS.md, etc.) from compression
+    if (msg.role === 'system') { pass1.push(msg); continue }
     if (isZombieMessage(msg)) { tokensFreed += estimateTokens(msg); stats.zombiesRemoved++; continue }
     if (isEmptyThrottleOrWarning(msg)) { tokensFreed += estimateTokens(msg); stats.emptyMessagesRemoved++; continue }
     pass1.push(msg)
@@ -274,7 +276,10 @@ function removeIntermediateToolResults(msgs, stats) {
   // Second pass: collapse intermediate results within message content
   const result = []
   for (let i = 0; i < msgs.length; i++) {
-    const msg = msgs[i]; const all = extractAllToolResults(msg)
+    const msg = msgs[i]
+    // Protect system messages from compression
+    if (msg.role === 'system') { result.push(msg); continue }
+    const all = extractAllToolResults(msg)
     if (all.length === 0) { result.push(msg); continue }
     let collapsed = false
     const newContent = all.map(b => JSON.parse(JSON.stringify(b)))  // deep clone blocks
@@ -314,7 +319,10 @@ function dedupeCrossConversationFileReads(msgs, stats) {
   }
   const result = []
   for (let i = 0; i < msgs.length; i++) {
-    const msg = msgs[i]; const all = extractAllToolResults(msg)
+    const msg = msgs[i]
+    // Protect system messages from compression
+    if (msg.role === 'system') { result.push(msg); continue }
+    const all = extractAllToolResults(msg)
     if (all.length === 0) { result.push(msg); continue }
     // If message has multiple blocks (e.g., [Read_result, OtherTool_result]), don't collapse
     // to avoid breaking the message structure
@@ -347,6 +355,8 @@ function dedupeCrossConversationFileReads(msgs, stats) {
 function truncateLargeOutputs(msgs, maxChars, stats) {
   if (maxChars <= 0) return msgs
   return msgs.map(msg => {
+    // Protect system messages from truncation
+    if (msg.role === 'system') return msg
     if (msg.type !== 'user' || !Array.isArray(msg.message?.content)) return msg
     const newContent = msg.message.content.map(block => {
       if (block.type !== 'tool_result' && block.type !== 'tool_result_error') {
